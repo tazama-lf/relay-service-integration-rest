@@ -1,4 +1,4 @@
-import RestRelayPlugin from '../src/service/restRelayPlugin';
+import RestAPIRelayPlugin from '../src/service/restRelayPlugin';
 import axios from 'axios';
 import NodeCache from 'node-cache';
 import { validateProcessorConfig } from '@tazama-lf/frms-coe-lib/lib/config/processor.config';
@@ -11,8 +11,8 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 const MockedNodeCache = NodeCache as jest.MockedClass<typeof NodeCache>;
 const mockedValidateProcessorConfig = validateProcessorConfig as jest.MockedFunction<typeof validateProcessorConfig>;
 
-describe('RestRelayPlugin', () => {
-  let plugin: RestRelayPlugin;
+describe('RestAPIRelayPlugin', () => {
+  let plugin: RestAPIRelayPlugin;
   let mockLoggerService: any;
   let mockApm: any;
   let mockCache: jest.Mocked<NodeCache>;
@@ -49,7 +49,7 @@ describe('RestRelayPlugin', () => {
     MockedNodeCache.mockImplementation(() => mockCache);
     mockedValidateProcessorConfig.mockReturnValue(mockConfig as any);
 
-    plugin = new RestRelayPlugin(mockLoggerService, mockApm);
+    plugin = new RestAPIRelayPlugin(mockLoggerService, mockApm);
   });
 
   afterEach(() => {
@@ -77,15 +77,15 @@ describe('RestRelayPlugin', () => {
       await plugin.init();
 
       expect(mockedAxios.get).toHaveBeenCalledTimes(2);
-      expect(mockLoggerService.log).toHaveBeenCalledWith('Healt check failed,trying again', 'RestRelayPlugin');
+      expect(mockLoggerService.log).toHaveBeenCalledWith('Healt check failed,trying again', 'RestAPIRelayPlugin');
     }, 10000);
     it('should throw error after max attempts', async () => {
       mockedAxios.get.mockResolvedValue({ status: 500 });
 
       await expect(plugin.init()).rejects.toThrow('Initialization failed: Unable to fetch a valid token');
       expect(mockLoggerService.error).toHaveBeenCalledWith(
-        'Failed to initialize RestRelayPlugin after multiple attempts',
-        'RestRelayPlugin',
+        'Failed to initialize RestAPIRelayPlugin after multiple attempts',
+        'RestAPIRelayPlugin',
       );
     }, 60000);
 
@@ -95,7 +95,7 @@ describe('RestRelayPlugin', () => {
 
       await plugin.init();
 
-      expect(mockLoggerService.error).toHaveBeenCalledWith('Token response is invalid', { data: null }, 'RestRelayPlugin');
+      expect(mockLoggerService.error).toHaveBeenCalledWith('Token response is invalid', { data: null }, 'RestAPIRelayPlugin');
       expect(mockCache.set).toHaveBeenCalledWith(mockConfig.AUTH_USERNAME, 'valid-token');
     });
   });
@@ -108,7 +108,7 @@ describe('RestRelayPlugin', () => {
 
       await plugin.relay(testData);
 
-      expect(mockLoggerService.log).toHaveBeenCalledWith('Relaying data', 'RestRelayPlugin');
+      expect(mockLoggerService.log).toHaveBeenCalledWith('Relaying data', 'RestAPIRelayPlugin');
       expect(mockCache.get).toHaveBeenCalledWith(mockConfig.AUTH_USERNAME);
       expect(mockedAxios.post).toHaveBeenCalledWith(
         mockConfig.DESTINATION_TRANSPORT_URL,
@@ -136,7 +136,7 @@ describe('RestRelayPlugin', () => {
 
       await plugin.relay(testData);
 
-      expect(mockLoggerService.error).toHaveBeenCalledWith('Failed to send data', expect.any(Error), 'RestRelayPlugin');
+      expect(mockLoggerService.error).toHaveBeenCalledWith('Failed to send data', expect.any(Error), 'RestAPIRelayPlugin');
     });
     it('should handle Uint8Array data', async () => {
       const testData = new Uint8Array([1, 2, 3]);
@@ -166,7 +166,7 @@ describe('RestRelayPlugin', () => {
       const result = await (plugin as any).fetchToken();
 
       expect(result).toBe('fetched-token');
-      expect(mockLoggerService.error).toHaveBeenCalledWith('Error fetching token', expect.any(Error), 'RestRelayPlugin');
+      expect(mockLoggerService.error).toHaveBeenCalledWith('Error fetching token', expect.any(Error), 'RestAPIRelayPlugin');
     });
 
     it('should throw error after max retries', async () => {
@@ -181,7 +181,7 @@ describe('RestRelayPlugin', () => {
       const result = await (plugin as any).fetchToken();
 
       expect(result).toBe('valid-token');
-      expect(mockLoggerService.error).toHaveBeenCalledWith('Invalid token response', { data: null }, 'RestRelayPlugin');
+      expect(mockLoggerService.error).toHaveBeenCalledWith('Invalid token response', { data: null }, 'RestAPIRelayPlugin');
     });
   });
 
@@ -229,7 +229,7 @@ describe('RestRelayPlugin', () => {
       await (plugin as any).sendData('old-token', 'test-payload');
 
       expect(mockedAxios.post).toHaveBeenCalledTimes(3);
-      expect(mockLoggerService.error).toHaveBeenCalledWith('Unauthorized access - token may be invalid', 'RestRelayPlugin');
+      expect(mockLoggerService.error).toHaveBeenCalledWith('Unauthorized access - token may be invalid', 'RestAPIRelayPlugin');
     });
 
     it('should handle send errors gracefully', async () => {
@@ -237,7 +237,7 @@ describe('RestRelayPlugin', () => {
 
       await (plugin as any).sendData('test-token', 'test-payload');
 
-      expect(mockLoggerService.error).toHaveBeenCalledWith('Failed to send data', expect.any(Error), 'RestRelayPlugin');
+      expect(mockLoggerService.error).toHaveBeenCalledWith('Failed to send data', expect.any(Error), 'RestAPIRelayPlugin');
     });
   });
 });
