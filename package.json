@@ -11,8 +11,6 @@
     "clean": "npx rimraf dist node_modules coverage package-lock.json",
     "build": "npx tsc",
     "test": "jest",
-    "version": "npm version patch",
-    "publish": "npm publish",
     "fix:eslint": "eslint --fix \"**/*.ts\"",
     "fix:prettier": "prettier --write \"**/*.ts\"",
     "lint": "npm run lint:eslint && npm run lint:prettier",

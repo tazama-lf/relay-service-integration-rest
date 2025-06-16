@@ -48,14 +48,14 @@ AUTH_PASSWORD=your-password
 
 ### Configuration Options
 
-| Environment Variable      | Description                                      | Default Value | Required |
-| ------------------------- | ------------------------------------------------ | ------------- | -------- |
-| MAX_SOCKETS               | Maximum number of HTTP sockets per agent        | 10            | Yes      |
-| AUTH_HEALTH_URL           | URL for authentication service health check      | -             | Yes      |
-| AUTH_TOKEN_URL            | URL for obtaining authentication tokens          | -             | Yes      |
-| DESTINATION_TRANSPORT_URL | The REST API endpoint to send data to           | -             | Yes      |
-| AUTH_USERNAME             | Username for authentication                      | -             | Yes      |
-| AUTH_PASSWORD             | Password for authentication                      | -             | Yes      |
+| Environment Variable      | Description                                 | Required |
+| ------------------------- | ------------------------------------------- | -------- |
+| MAX_SOCKETS               | Maximum number of HTTP sockets per agent    | Yes      |
+| AUTH_HEALTH_URL           | URL for authentication service health check | Yes      |
+| AUTH_TOKEN_URL            | URL for obtaining authentication tokens     | Yes      |
+| DESTINATION_TRANSPORT_URL | The REST API endpoint to send data to       | Yes      |
+| AUTH_USERNAME             | Username for authentication                 | Yes      |
+| AUTH_PASSWORD             | Password for authentication                 | Yes      |
 
 ## Usage
 
@@ -84,33 +84,6 @@ const objectData = { message: 'Hello, REST API!', timestamp: Date.now() };
 await restRelayPlugin.relay(stringData);
 await restRelayPlugin.relay(binaryData);
 await restRelayPlugin.relay(objectData); // Objects are automatically JSON stringified
-```
-
-### Custom Implementation with Service Import
-
-```typescript
-import RestRelayPlugin from '@tazama-lf/rest-relay-plugin/service/restRelayPlugin';
-import { LoggerService, Apm } from '@tazama-lf/frms-coe-lib';
-
-// Create logger and APM instances
-const loggerService = new LoggerService();
-const apm = new Apm();
-
-// Create an instance with required dependencies
-const myRestRelay = new RestRelayPlugin(loggerService, apm);
-
-// Initialize the connection and authentication
-await myRestRelay.init();
-
-// Send data with APM tracing support
-const data = {
-  payload: 'Important message',
-  metaData: {
-    messageId: 'msg-123',
-    timestamp: Date.now(),
-  },
-};
-await myRestRelay.relay(data);
 ```
 
 ## API Reference
@@ -283,8 +256,6 @@ rest-relay-plugin/
 - `npm run clean` - Clean build artifacts
 - `npm run build` - Build the TypeScript code
 - `npm test` - Run the test suite
-- `npm run version` - Bump package version
-- `npm run publish` - Publish the package
 - `npm run fix:eslint` - Fix ESLint issues automatically
 - `npm run fix:prettier` - Fix Prettier issues automatically
 - `npm run lint` - Lint the codebase (ESLint and Prettier)
@@ -305,11 +276,13 @@ The plugin includes comprehensive unit tests using Jest. The tests cover authent
 - Mock implementations for external dependencies
 
 Run the tests with:
+
 ```bash
 npm test
 ```
 
 Generate coverage reports with:
+
 ```bash
 npm test -- --coverage
 ```
