@@ -13,7 +13,7 @@ interface ITransportPlugin {
   relay: (data: Uint8Array | string) => Promise<void>;
 }
 
-export default class RestRelayPlugin implements ITransportPlugin {
+export default class RestAPIRelayPlugin implements ITransportPlugin {
   private readonly loggerService: LoggerService;
   private readonly apm: Apm;
   private readonly configuration: Configuration;
@@ -40,13 +40,12 @@ export default class RestRelayPlugin implements ITransportPlugin {
    *         and re-thrown for external handling.
    */
   async init(): Promise<void> {
-    // try {
-    this.loggerService.log('init() called, fetching auth token', RestRelayPlugin.name);
+    this.loggerService.log('init() called, fetching auth token', RestAPIRelayPlugin.name);
     let isHealthy = false;
     for (let i = 0; i < 10; i++) {
       const healthCheck = await axios.get(this.configuration.AUTH_HEALTH_URL);
       if (healthCheck.status !== 200) {
-        this.loggerService.log('Healt check failed,trying again', RestRelayPlugin.name);
+        this.loggerService.log('Healt check failed,trying again', RestAPIRelayPlugin.name);
         await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait for 1 second before retrying
       } else {
         const tokenRes = await axios.post(this.configuration.AUTH_TOKEN_URL, {
@@ -54,7 +53,7 @@ export default class RestRelayPlugin implements ITransportPlugin {
           password: this.configuration.AUTH_PASSWORD,
         });
         if (!tokenRes.data) {
-          this.loggerService.error('Token response is invalid', tokenRes, RestRelayPlugin.name);
+          this.loggerService.error('Token response is invalid', tokenRes, RestAPIRelayPlugin.name);
           continue;
         }
         this.cache.set(this.configuration.AUTH_USERNAME, tokenRes.data);
@@ -63,13 +62,9 @@ export default class RestRelayPlugin implements ITransportPlugin {
       }
     }
     if (!isHealthy) {
-      this.loggerService.error('Failed to initialize RestRelayPlugin after multiple attempts', RestRelayPlugin.name);
+      this.loggerService.error('Failed to initialize RestAPIRelayPlugin after multiple attempts', RestAPIRelayPlugin.name);
       throw new Error('Initialization failed: Unable to fetch a valid token');
     }
-    // } catch (error) {
-    // this.loggerService.error('Failed to initialize RestRelayPlugin', error, RestRelayPlugin.name);
-    // throw error;
-    // }
   }
 
   /**
@@ -87,19 +82,19 @@ export default class RestRelayPlugin implements ITransportPlugin {
    */
   async relay(data: Uint8Array | string): Promise<void> {
     let apmTransaction = null;
-    this.loggerService.log('Relaying data', RestRelayPlugin.name);
+    this.loggerService.log('Relaying data', RestAPIRelayPlugin.name);
     let token = this.cache.get<string>(this.configuration.AUTH_USERNAME);
     if (!token) {
       token = await this.fetchToken();
     }
     const payload = this.preparePayload(data);
     try {
-      apmTransaction = this.apm.startTransaction(RestRelayPlugin.name);
+      apmTransaction = this.apm.startTransaction(RestAPIRelayPlugin.name);
       const span = this.apm.startSpan('relay');
       await this.sendData(token, payload);
       span?.end();
     } catch (error) {
-      this.loggerService.error('Error relaying data', error, RestRelayPlugin.name);
+      this.loggerService.error('Error relaying data', error, RestAPIRelayPlugin.name);
     } finally {
       if (apmTransaction) {
         apmTransaction.end();
@@ -134,10 +129,10 @@ export default class RestRelayPlugin implements ITransportPlugin {
           this.cache.set(this.configuration.AUTH_USERNAME, tokenRes.data);
           return tokenRes.data;
         } else {
-          this.loggerService.error('Invalid token response', tokenRes, RestRelayPlugin.name);
+          this.loggerService.error('Invalid token response', tokenRes, RestAPIRelayPlugin.name);
         }
       } catch (error) {
-        this.loggerService.error('Error fetching token', error, RestRelayPlugin.name);
+        this.loggerService.error('Error fetching token', error, RestAPIRelayPlugin.name);
       }
 
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -190,7 +185,7 @@ export default class RestRelayPlugin implements ITransportPlugin {
       });
 
       if (response.status === 401) {
-        this.loggerService.error('Unauthorized access - token may be invalid', RestRelayPlugin.name);
+        this.loggerService.error('Unauthorized access - token may be invalid', RestAPIRelayPlugin.name);
         const newToken = await this.fetchToken();
         await axios.post(this.configuration.DESTINATION_TRANSPORT_URL, payload, {
           headers: {
@@ -201,7 +196,7 @@ export default class RestRelayPlugin implements ITransportPlugin {
         });
       }
     } catch (error) {
-      this.loggerService.error('Failed to send data', error, RestRelayPlugin.name);
+      this.loggerService.error('Failed to send data', error, RestAPIRelayPlugin.name);
     }
   }
 }

@@ -1,4 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-import RestRelayPlugin from './service/restRelayPlugin';
+import RestAPIRelayPlugin from './service/restRelayPlugin';
 
-export default RestRelayPlugin;
+export default RestAPIRelayPlugin;
