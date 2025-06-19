@@ -7,23 +7,29 @@ import axios from 'axios';
 import NodeCache from 'node-cache';
 import { additionalEnvironmentVariables, type Configuration } from '../config';
 import { validateProcessorConfig } from '@tazama-lf/frms-coe-lib/lib/config/processor.config';
-
-interface ITransportPlugin {
-  init: () => Promise<void>;
-  relay: (data: Uint8Array | string) => Promise<void>;
-}
+import type { ITransportPlugin } from '@tazama-lf/frms-coe-lib/lib/interfaces/relay-service/ITransportPlugin';
 
 export default class RestAPIRelayPlugin implements ITransportPlugin {
   private readonly loggerService: LoggerService;
   private readonly apm: Apm;
   private readonly configuration: Configuration;
   private readonly cache: NodeCache;
+  private readonly httpAgent: http.Agent;
+  private readonly httpsAgent: https.Agent;
 
   constructor(loggerService: LoggerService, apm: Apm) {
     this.loggerService = loggerService;
     this.apm = apm;
     this.configuration = validateProcessorConfig(additionalEnvironmentVariables) as Configuration;
     this.cache = new NodeCache();
+    this.httpAgent = new http.Agent({
+      keepAlive: true,
+      maxSockets: this.configuration.MAX_SOCKETS,
+    });
+    this.httpsAgent = new https.Agent({
+      keepAlive: true,
+      maxSockets: this.configuration.MAX_SOCKETS,
+    });
   }
 
   /**
@@ -45,7 +51,7 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
     for (let i = 0; i < 10; i++) {
       const healthCheck = await axios.get(this.configuration.AUTH_HEALTH_URL);
       if (healthCheck.status !== 200) {
-        this.loggerService.log('Healt check failed,trying again', RestAPIRelayPlugin.name);
+        this.loggerService.log('Health check failed,trying again', RestAPIRelayPlugin.name);
         await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait for 1 second before retrying
       } else {
         const tokenRes = await axios.post(this.configuration.AUTH_TOKEN_URL, {
@@ -95,6 +101,7 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
       span?.end();
     } catch (error) {
       this.loggerService.error('Error relaying data', error, RestAPIRelayPlugin.name);
+      throw error as Error;
     } finally {
       if (apmTransaction) {
         apmTransaction.end();
@@ -180,8 +187,8 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        httpAgent: new http.Agent({ keepAlive: true, maxSockets: this.configuration.MAX_SOCKETS }),
-        httpsAgent: new https.Agent({ keepAlive: true, maxSockets: this.configuration.MAX_SOCKETS }),
+        httpAgent: this.httpAgent,
+        httpsAgent: this.httpsAgent,
       });
 
       if (response.status === 401) {
@@ -191,12 +198,13 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
           headers: {
             Authorization: `Bearer ${newToken}`,
           },
-          httpAgent: new http.Agent({ keepAlive: true, maxSockets: this.configuration.MAX_SOCKETS }),
-          httpsAgent: new https.Agent({ keepAlive: true, maxSockets: this.configuration.MAX_SOCKETS }),
+          httpAgent: this.httpAgent,
+          httpsAgent: this.httpsAgent,
         });
       }
     } catch (error) {
       this.loggerService.error('Failed to send data', error, RestAPIRelayPlugin.name);
+      throw error as Error;
     }
   }
 }

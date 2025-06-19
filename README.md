@@ -90,7 +90,7 @@ await restRelayPlugin.relay(objectData); // Objects are automatically JSON strin
 
 ### `RestRelayPlugin` Class
 
-The main class that implements the `ITransportPlugin` interface.
+The main class that implements the `ITransportPlugin` interface imported from the `@tazama-lf/frms-coe-lib`.
 
 #### Constructor
 

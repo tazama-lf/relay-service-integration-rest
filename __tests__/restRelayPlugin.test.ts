@@ -77,7 +77,7 @@ describe('RestAPIRelayPlugin', () => {
       await plugin.init();
 
       expect(mockedAxios.get).toHaveBeenCalledTimes(2);
-      expect(mockLoggerService.log).toHaveBeenCalledWith('Healt check failed,trying again', 'RestAPIRelayPlugin');
+      expect(mockLoggerService.log).toHaveBeenCalledWith('Health check failed,trying again', 'RestAPIRelayPlugin');
     }, 10000);
     it('should throw error after max attempts', async () => {
       mockedAxios.get.mockResolvedValue({ status: 500 });
@@ -134,9 +134,8 @@ describe('RestAPIRelayPlugin', () => {
       mockCache.get.mockReturnValue('cached-token');
       mockedAxios.post.mockRejectedValue(new Error('Network error'));
 
-      await plugin.relay(testData);
-
-      expect(mockLoggerService.error).toHaveBeenCalledWith('Failed to send data', expect.any(Error), 'RestAPIRelayPlugin');
+      await expect(plugin.relay(testData)).rejects.toThrow('Network error');
+      expect(mockLoggerService.error).toHaveBeenCalledWith('Error relaying data', expect.any(Error), 'RestAPIRelayPlugin');
     });
     it('should handle Uint8Array data', async () => {
       const testData = new Uint8Array([1, 2, 3]);
@@ -235,8 +234,7 @@ describe('RestAPIRelayPlugin', () => {
     it('should handle send errors gracefully', async () => {
       mockedAxios.post.mockRejectedValue(new Error('Send error'));
 
-      await (plugin as any).sendData('test-token', 'test-payload');
-
+      await expect((plugin as any).sendData('test-token', 'test-payload')).rejects.toThrow('Send error');
       expect(mockLoggerService.error).toHaveBeenCalledWith('Failed to send data', expect.any(Error), 'RestAPIRelayPlugin');
     });
   });
