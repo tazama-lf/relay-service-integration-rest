@@ -70,10 +70,10 @@ const loggerService = new LoggerService();
 const apm = new Apm();
 
 // Create plugin instance
-const restRelayPlugin = new RestRelayPlugin(loggerService, apm);
+const restRelayPlugin = new RestRelayPlugin();
 
 // Initialize the plugin (performs health check and fetches authentication token)
-await restRelayPlugin.init();
+await restRelayPlugin.init(loggerService, apm);
 
 // Create some data to send (supports various formats)
 const stringData = 'Hello, REST API!';
@@ -92,26 +92,19 @@ await restRelayPlugin.relay(objectData); // Objects are automatically JSON strin
 
 The main class that implements the `ITransportPlugin` interface imported from the `@tazama-lf/frms-coe-lib`.
 
-#### Constructor
+#### Methods
+
+##### `init(loggerService?: LoggerService, apm?: Apm)`
+
+Initializes the REST relay plugin by performing health checks and fetching authentication tokens.
 
 ```typescript
-constructor(loggerService: LoggerService, apm: Apm)
+async init(loggerService?: LoggerService, apm?: Apm): Promise<void>
 ```
 
 - **Parameters**:
   - `loggerService`: An instance of LoggerService from @tazama-lf/frms-coe-lib for logging
   - `apm`: An instance of Apm from @tazama-lf/frms-coe-lib for performance monitoring
-
-#### Methods
-
-##### `init()`
-
-Initializes the REST relay plugin by performing health checks and fetching authentication tokens.
-
-```typescript
-async init(): Promise<void>
-```
-
 - **Returns**: A Promise that resolves when initialization is complete
 - **Functionality**:
   - Performs health check on the authentication service (up to 10 retries with 5-second delays)
@@ -177,7 +170,7 @@ Defines the contract for transport plugins.
 
 ```typescript
 export interface ITransportPlugin {
-  init: () => Promise<void>;
+  init: (loggerService?: LoggerService, apm?: Apm) => Promise<void>;
   relay: (data: Uint8Array | string) => Promise<void>;
 }
 ```
