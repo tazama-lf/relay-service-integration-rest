@@ -25,6 +25,7 @@ describe('RestAPIRelayPlugin', () => {
     DESTINATION_TRANSPORT_URL: 'http://destination',
     MAX_SOCKETS: 10,
     RETRY_ATTEMPTS: 10,
+    OUTPUT_TO_JSON: true,
   };
 
   beforeEach(() => {
@@ -158,8 +159,7 @@ describe('RestAPIRelayPlugin', () => {
       await plugin.init(mockLoggerService, mockApm);
       jest.clearAllMocks(); // Clear mocks after init to focus on relay method calls
     });
-
-    it('should relay data with cached token', async () => {
+    it('should relay data with cached token and include Content-Type header when OUTPUT_TO_JSON is true', async () => {
       const testData = 'test-data';
       mockCache.get.mockReturnValue('cached-token');
       mockedAxios.post.mockResolvedValue({ status: 200 });
@@ -172,7 +172,10 @@ describe('RestAPIRelayPlugin', () => {
         mockConfig.DESTINATION_TRANSPORT_URL,
         testData,
         expect.objectContaining({
-          headers: { Authorization: 'Bearer cached-token' },
+          headers: {
+            Authorization: 'Bearer cached-token',
+            'Content-Type': 'application/json',
+          },
           httpAgent: expect.any(Object),
           httpsAgent: expect.any(Object),
         }),
@@ -238,7 +241,6 @@ describe('RestAPIRelayPlugin', () => {
 
       sendDataSpy.mockRestore();
     });
-
     it('should handle Uint8Array data correctly', async () => {
       const testData = new Uint8Array([1, 2, 3]);
       mockCache.get.mockReturnValue('cached-token');
@@ -250,7 +252,10 @@ describe('RestAPIRelayPlugin', () => {
         mockConfig.DESTINATION_TRANSPORT_URL,
         testData, // Data is passed directly without processing
         expect.objectContaining({
-          headers: { Authorization: 'Bearer cached-token' },
+          headers: {
+            Authorization: 'Bearer cached-token',
+            'Content-Type': 'application/json',
+          },
           httpAgent: expect.any(Object),
           httpsAgent: expect.any(Object),
         }),
@@ -268,7 +273,10 @@ describe('RestAPIRelayPlugin', () => {
         mockConfig.DESTINATION_TRANSPORT_URL,
         testData,
         expect.objectContaining({
-          headers: { Authorization: 'Bearer cached-token' },
+          headers: {
+            Authorization: 'Bearer cached-token',
+            'Content-Type': 'application/json',
+          },
           httpAgent: expect.any(Object),
           httpsAgent: expect.any(Object),
         }),
@@ -286,13 +294,15 @@ describe('RestAPIRelayPlugin', () => {
         mockConfig.DESTINATION_TRANSPORT_URL,
         testData,
         expect.objectContaining({
-          headers: { Authorization: 'Bearer cached-token' },
+          headers: {
+            Authorization: 'Bearer cached-token',
+            'Content-Type': 'application/json',
+          },
           httpAgent: expect.any(Object),
           httpsAgent: expect.any(Object),
         }),
       );
     });
-
     it('should handle null APM gracefully', async () => {
       // Reinitialize plugin without APM
       const pluginWithoutApm = new RestAPIRelayPlugin();
@@ -305,6 +315,31 @@ describe('RestAPIRelayPlugin', () => {
       await pluginWithoutApm.relay(testData);
 
       expect(mockLoggerService.log).toHaveBeenCalledWith('Relaying data', 'RestAPIRelayPlugin');
+    });
+
+    it('should not include Content-Type header when OUTPUT_TO_JSON is false', async () => {
+      // Create a new plugin instance with OUTPUT_TO_JSON set to false
+      const mockConfigWithoutJSON = { ...mockConfig, OUTPUT_TO_JSON: false };
+      mockedValidateProcessorConfig.mockReturnValue(mockConfigWithoutJSON as any);
+
+      const pluginWithoutJSON = new RestAPIRelayPlugin();
+      await pluginWithoutJSON.init(mockLoggerService, mockApm);
+
+      const testData = 'test-data';
+      mockCache.get.mockReturnValue('cached-token');
+      mockedAxios.post.mockResolvedValue({ status: 200 });
+
+      await pluginWithoutJSON.relay(testData);
+
+      expect(mockedAxios.post).toHaveBeenCalledWith(
+        mockConfigWithoutJSON.DESTINATION_TRANSPORT_URL,
+        testData,
+        expect.objectContaining({
+          headers: { Authorization: 'Bearer cached-token' }, // No Content-Type header
+          httpAgent: expect.any(Object),
+          httpsAgent: expect.any(Object),
+        }),
+      );
     });
   });
 
@@ -378,7 +413,6 @@ describe('RestAPIRelayPlugin', () => {
       await plugin.init(mockLoggerService, mockApm);
       jest.clearAllMocks();
     });
-
     it('should send data successfully', async () => {
       mockedAxios.post.mockResolvedValue({ status: 200 });
 
@@ -388,7 +422,10 @@ describe('RestAPIRelayPlugin', () => {
         mockConfig.DESTINATION_TRANSPORT_URL,
         'test-payload',
         expect.objectContaining({
-          headers: { Authorization: 'Bearer test-token' },
+          headers: {
+            Authorization: 'Bearer test-token',
+            'Content-Type': 'application/json',
+          },
           httpAgent: expect.any(Object),
           httpsAgent: expect.any(Object),
         }),
@@ -405,15 +442,16 @@ describe('RestAPIRelayPlugin', () => {
 
       expect(mockedAxios.post).toHaveBeenCalledTimes(2);
       expect(mockLoggerService.log).toHaveBeenCalledWith('Unauthorized access - token may be invalid', 'RestAPIRelayPlugin');
-      expect(fetchTokenSpy).toHaveBeenCalled();
-
-      // Verify the second call uses the new token
+      expect(fetchTokenSpy).toHaveBeenCalled(); // Verify the second call uses the new token
       expect(mockedAxios.post).toHaveBeenNthCalledWith(
         2,
         mockConfig.DESTINATION_TRANSPORT_URL,
         'test-payload',
         expect.objectContaining({
-          headers: { Authorization: 'Bearer new-token' },
+          headers: {
+            Authorization: 'Bearer new-token',
+            'Content-Type': 'application/json',
+          },
           httpAgent: expect.any(Object),
           httpsAgent: expect.any(Object),
         }),

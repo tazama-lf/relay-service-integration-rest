@@ -9,6 +9,7 @@ dotenv.config({
 
 export interface ExtendedConfig {
   RETRY_ATTEMPTS: number;
+  OUTPUT_TO_JSON: boolean;
   MAX_SOCKETS: number;
   AUTH_HEALTH_URL: string;
   AUTH_TOKEN_URL: string;
@@ -45,6 +46,10 @@ export const additionalEnvironmentVariables: AdditionalConfig[] = [
   {
     name: 'AUTH_PASSWORD',
     type: 'string',
+  },
+  {
+    name: 'OUTPUT_TO_JSON',
+    type: 'boolean',
   },
 ];
 

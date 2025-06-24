@@ -148,10 +148,19 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
    */
   private async sendData(token: string, payload: Uint8Array | string): Promise<void> {
     const makeRequest = async (authToken: string): Promise<AxiosResponse> => {
-      return await axios.post(this.configuration.DESTINATION_TRANSPORT_URL, payload, {
-        headers: {
+      let headers: Record<string, string> = {};
+      if (this.configuration.OUTPUT_TO_JSON) {
+        headers = {
           Authorization: `Bearer ${authToken}`,
-        },
+          'Content-Type': 'application/json',
+        };
+      } else {
+        headers = {
+          Authorization: `Bearer ${authToken}`,
+        };
+      }
+      return await axios.post(this.configuration.DESTINATION_TRANSPORT_URL, payload, {
+        headers,
         httpAgent: this.httpAgent,
         httpsAgent: this.httpsAgent,
       });
