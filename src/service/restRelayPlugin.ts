@@ -3,7 +3,7 @@ import type { LoggerService } from '@tazama-lf/frms-coe-lib';
 import type { Apm } from '@tazama-lf/frms-coe-lib/lib/services/apm';
 import http from 'http';
 import https from 'https';
-import axios from 'axios';
+import axios, { type AxiosResponse } from 'axios';
 import NodeCache from 'node-cache';
 import { additionalEnvironmentVariables, type Configuration } from '../config';
 import { validateProcessorConfig } from '@tazama-lf/frms-coe-lib/lib/config/processor.config';
@@ -35,11 +35,11 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
     this.apm = apm;
     this.loggerService?.log('init() called, fetching auth token', RestAPIRelayPlugin.name);
     let isHealthy = false;
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < this.configuration.RETRY_ATTEMPTS; i++) {
       const healthCheck = await axios.get(this.configuration.AUTH_HEALTH_URL);
       if (healthCheck.status !== 200) {
         this.loggerService?.log('Health check failed,trying again', RestAPIRelayPlugin.name);
-        await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait for 1 second before retrying
+        await new Promise((resolve) => setTimeout(resolve, 5000));
       } else {
         const tokenRes = await axios.post(this.configuration.AUTH_TOKEN_URL, {
           username: this.configuration.AUTH_USERNAME,
@@ -80,11 +80,10 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
     if (!token) {
       token = await this.fetchToken();
     }
-    const payload = this.preparePayload(data);
     try {
       apmTransaction = this.apm?.startTransaction(RestAPIRelayPlugin.name);
       const span = this.apm?.startSpan('relay');
-      await this.sendData(token, payload);
+      await this.sendData(token, data);
       span?.end();
     } catch (error) {
       this.loggerService?.error('Error relaying data', error, RestAPIRelayPlugin.name);
@@ -112,7 +111,7 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
    * @async
    */
   private async fetchToken(): Promise<string> {
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < this.configuration.RETRY_ATTEMPTS; i++) {
       try {
         const tokenRes = await axios.post(this.configuration.AUTH_TOKEN_URL, {
           username: this.configuration.AUTH_USERNAME,
@@ -135,27 +134,6 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
   }
 
   /**
-   * Prepares the payload for transmission by ensuring it is in the correct format.
-   *
-   * This method accepts data in the form of a `Uint8Array` or `string` and returns it
-   * in the same format if valid. If the data is neither a `Uint8Array` nor a `string`,
-   * it converts the data to a JSON string representation.
-   *
-   * @param data - The input data to be prepared for transmission. Can be a `Uint8Array` or `string`.
-   * @returns The prepared payload in the same format as the input (`Uint8Array` or `string`),
-   *          or a JSON string if the input is neither.
-   */
-  private preparePayload(data: Uint8Array | string): Uint8Array | string {
-    if (Buffer.isBuffer(data)) {
-      return data;
-    } else if (typeof data === 'string') {
-      return data;
-    } else {
-      return JSON.stringify(data);
-    }
-  }
-
-  /**
    * Sends data to the configured destination transport URL using an authentication token.
    *
    * This method performs an HTTP POST request to relay the provided payload to the destination
@@ -169,25 +147,23 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
    * @throws Throws an error if the request fails or if retry attempts are unsuccessful.
    */
   private async sendData(token: string, payload: Uint8Array | string): Promise<void> {
-    try {
-      const response = await axios.post(this.configuration.DESTINATION_TRANSPORT_URL, payload, {
+    const makeRequest = async (authToken: string): Promise<AxiosResponse> => {
+      return await axios.post(this.configuration.DESTINATION_TRANSPORT_URL, payload, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${authToken}`,
         },
         httpAgent: this.httpAgent,
         httpsAgent: this.httpsAgent,
       });
+    };
+
+    try {
+      const response = await makeRequest(token);
 
       if (response.status === 401) {
-        this.loggerService?.error('Unauthorized access - token may be invalid', RestAPIRelayPlugin.name);
+        this.loggerService?.log('Unauthorized access - token may be invalid', RestAPIRelayPlugin.name);
         const newToken = await this.fetchToken();
-        await axios.post(this.configuration.DESTINATION_TRANSPORT_URL, payload, {
-          headers: {
-            Authorization: `Bearer ${newToken}`,
-          },
-          httpAgent: this.httpAgent,
-          httpsAgent: this.httpsAgent,
-        });
+        await makeRequest(newToken);
       }
     } catch (error) {
       this.loggerService?.error('Failed to send data', error, RestAPIRelayPlugin.name);

@@ -24,6 +24,7 @@ describe('RestAPIRelayPlugin', () => {
     AUTH_PASSWORD: 'testpass',
     DESTINATION_TRANSPORT_URL: 'http://destination',
     MAX_SOCKETS: 10,
+    RETRY_ATTEMPTS: 10,
   };
 
   beforeEach(() => {
@@ -240,7 +241,6 @@ describe('RestAPIRelayPlugin', () => {
 
     it('should handle Uint8Array data correctly', async () => {
       const testData = new Uint8Array([1, 2, 3]);
-      const expectedPayload = JSON.stringify(testData); // The implementation actually stringifies Uint8Array
       mockCache.get.mockReturnValue('cached-token');
       mockedAxios.post.mockResolvedValue({ status: 200 });
 
@@ -248,7 +248,7 @@ describe('RestAPIRelayPlugin', () => {
 
       expect(mockedAxios.post).toHaveBeenCalledWith(
         mockConfig.DESTINATION_TRANSPORT_URL,
-        expectedPayload,
+        testData, // Data is passed directly without processing
         expect.objectContaining({
           headers: { Authorization: 'Bearer cached-token' },
           httpAgent: expect.any(Object),
@@ -275,17 +275,16 @@ describe('RestAPIRelayPlugin', () => {
       );
     });
 
-    it('should handle object data by stringifying it', async () => {
-      const testData = { message: 'test', value: 123 };
-      const expectedPayload = JSON.stringify(testData);
+    it('should handle string data correctly', async () => {
+      const testData = 'test-string';
       mockCache.get.mockReturnValue('cached-token');
       mockedAxios.post.mockResolvedValue({ status: 200 });
 
-      await plugin.relay(testData as any);
+      await plugin.relay(testData);
 
       expect(mockedAxios.post).toHaveBeenCalledWith(
         mockConfig.DESTINATION_TRANSPORT_URL,
-        expectedPayload,
+        testData,
         expect.objectContaining({
           headers: { Authorization: 'Bearer cached-token' },
           httpAgent: expect.any(Object),
@@ -365,56 +364,12 @@ describe('RestAPIRelayPlugin', () => {
       jest.useRealTimers();
     }, 15000);
 
-    it('should retry exactly 10 times before failing', async () => {
+    it('should retry exactly configured times before failing', async () => {
       mockedAxios.post.mockRejectedValue(new Error('Network error'));
 
       await expect((plugin as any).fetchToken()).rejects.toThrow('Failed to fetch token after multiple attempts');
-      expect(mockedAxios.post).toHaveBeenCalledTimes(10);
+      expect(mockedAxios.post).toHaveBeenCalledTimes(mockConfig.RETRY_ATTEMPTS);
     }, 60000);
-  });
-
-  describe('preparePayload', () => {
-    it('should return Buffer as is', () => {
-      const buffer = Buffer.from('test');
-      const result = (plugin as any).preparePayload(buffer);
-      expect(result).toBe(buffer);
-    });
-
-    it('should return string as is', () => {
-      const str = 'test-string';
-      const result = (plugin as any).preparePayload(str);
-      expect(result).toBe(str);
-    });
-
-    it('should return Uint8Array as JSON string (Buffer.isBuffer returns false for Uint8Array)', () => {
-      const uint8Array = new Uint8Array([1, 2, 3]);
-      const result = (plugin as any).preparePayload(uint8Array);
-      expect(result).toBe(JSON.stringify(uint8Array));
-    });
-
-    it('should stringify non-string non-buffer data', () => {
-      const obj = { test: 'data' };
-      const result = (plugin as any).preparePayload(obj);
-      expect(result).toBe(JSON.stringify(obj));
-    });
-
-    it('should stringify number data', () => {
-      const num = 42;
-      const result = (plugin as any).preparePayload(num);
-      expect(result).toBe(JSON.stringify(num));
-    });
-
-    it('should stringify boolean data', () => {
-      const bool = true;
-      const result = (plugin as any).preparePayload(bool);
-      expect(result).toBe(JSON.stringify(bool));
-    });
-
-    it('should stringify array data', () => {
-      const arr = [1, 2, 3];
-      const result = (plugin as any).preparePayload(arr);
-      expect(result).toBe(JSON.stringify(arr));
-    });
   });
 
   describe('sendData', () => {
@@ -449,7 +404,7 @@ describe('RestAPIRelayPlugin', () => {
       await (plugin as any).sendData('old-token', 'test-payload');
 
       expect(mockedAxios.post).toHaveBeenCalledTimes(2);
-      expect(mockLoggerService.error).toHaveBeenCalledWith('Unauthorized access - token may be invalid', 'RestAPIRelayPlugin');
+      expect(mockLoggerService.log).toHaveBeenCalledWith('Unauthorized access - token may be invalid', 'RestAPIRelayPlugin');
       expect(fetchTokenSpy).toHaveBeenCalled();
 
       // Verify the second call uses the new token

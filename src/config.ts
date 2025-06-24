@@ -8,6 +8,7 @@ dotenv.config({
 });
 
 export interface ExtendedConfig {
+  RETRY_ATTEMPTS: number;
   MAX_SOCKETS: number;
   AUTH_HEALTH_URL: string;
   AUTH_TOKEN_URL: string;
@@ -17,6 +18,10 @@ export interface ExtendedConfig {
 }
 
 export const additionalEnvironmentVariables: AdditionalConfig[] = [
+  {
+    name: 'RETRY_ATTEMPTS',
+    type: 'number',
+  },
   {
     name: 'MAX_SOCKETS',
     type: 'number',

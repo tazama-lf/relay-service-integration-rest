@@ -12,7 +12,7 @@ The REST Relay Plugin is a transport plugin that enables applications to easily 
 - Built-in authentication token management with automatic refresh
 - Token caching to minimize authentication requests
 - HTTP/HTTPS connection pooling for optimal performance
-- Health check verification before initialization
+- Health check verification before initialization. (Should return a 200 status code)
 - Automatic retry mechanisms for token fetching and API calls
 - Support for various data types (binary, string, object) with automatic conversion
 - APM integration for performance monitoring and tracing
@@ -38,6 +38,7 @@ npm install @tazama-lf/rest-relay-plugin
 The plugin uses environment variables for configuration. Create a `.env` file in the root directory with the following variables:
 
 ```
+RETRY_ATTEMPTS=10
 MAX_SOCKETS=10
 AUTH_HEALTH_URL=https://auth-service/health
 AUTH_TOKEN_URL=https://auth-service/token
@@ -50,6 +51,7 @@ AUTH_PASSWORD=your-password
 
 | Environment Variable      | Description                                 | Required |
 | ------------------------- | ------------------------------------------- | -------- |
+| RETRY_ATTEMPTS            | Number of retry attempts for operations     | Yes      |
 | MAX_SOCKETS               | Maximum number of HTTP sockets per agent    | Yes      |
 | AUTH_HEALTH_URL           | URL for authentication service health check | Yes      |
 | AUTH_TOKEN_URL            | URL for obtaining authentication tokens     | Yes      |
@@ -107,7 +109,8 @@ async init(loggerService?: LoggerService, apm?: Apm): Promise<void>
   - `apm`: An instance of Apm from @tazama-lf/frms-coe-lib for performance monitoring
 - **Returns**: A Promise that resolves when initialization is complete
 - **Functionality**:
-  - Performs health check on the authentication service (up to 10 retries with 5-second delays)
+  - Performs health check on the authentication service (up to configured retries with 5-second delays)
+    It should return a 200 status code for confirmation.
   - Fetches an authentication token using the configured credentials
   - Caches the token for future use
   - Logs success or failure of initialization
@@ -122,16 +125,12 @@ async relay(data: Uint8Array | string): Promise<void>
 ```
 
 - **Parameters**:
-  - `data`: The data to relay to the REST API. Can be a Uint8Array, string, or any object that can be converted to JSON.
+  - `data`: The data to relay to the REST API. Can be a Uint8Array, string.
 - **Returns**: A Promise that resolves when the operation completes.
 - **Functionality**:
   - Creates an APM transaction for monitoring
   - Creates a span to track the relay operation
   - Retrieves cached authentication token or fetches a new one if needed
-  - Converts the input data to the appropriate format:
-    - Buffers are sent as-is
-    - Strings are sent as-is
-    - Objects are JSON-serialized
   - Sends the data to the configured REST API endpoint with Bearer token authentication
   - Handles 401 errors by automatically refreshing the token and retrying
   - Uses connection pooling for optimal performance
@@ -144,11 +143,7 @@ async relay(data: Uint8Array | string): Promise<void>
 
 Fetches an authentication token with retry logic (up to 5 attempts with 500ms delays).
 
-#### `preparePayload(data)`
-
-Prepares the payload for transmission by ensuring it's in the correct format.
-
-#### `sendData(token, payload)`
+#### `sendData(token, data)`
 
 Sends data to the destination URL with authentication and handles unauthorized errors.
 
@@ -181,6 +176,7 @@ Configuration interface that extends the base ProcessorConfig.
 
 ```typescript
 export interface ExtendedConfig {
+  RETRY_ATTEMPTS: number;
   MAX_SOCKETS: number;
   AUTH_HEALTH_URL: string;
   AUTH_TOKEN_URL: string;
@@ -232,6 +228,7 @@ rest-relay-plugin/
    ```
 3. Create a `.env` file with your configuration:
    ```
+   RETRY_ATTEMPTS=10
    MAX_SOCKETS=10
    AUTH_HEALTH_URL=https://your-auth-service/health
    AUTH_TOKEN_URL=https://your-auth-service/token
@@ -262,7 +259,7 @@ The plugin includes comprehensive unit tests using Jest. The tests cover authent
 
 - Authentication service health checks and token fetching
 - Token caching and refresh mechanisms
-- Data relay for different formats (string, Buffer, objects)
+- Data relay for different formats (string, Buffer)
 - Error handling for authentication failures and API errors
 - HTTP connection pooling and retry logic
 - APM transaction and span creation
