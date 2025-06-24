@@ -112,7 +112,7 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
    * @async
    */
   private async fetchToken(): Promise<string> {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       try {
         const tokenRes = await axios.post(this.configuration.AUTH_TOKEN_URL, {
           username: this.configuration.AUTH_USERNAME,
@@ -129,7 +129,7 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
         this.loggerService?.error('Error fetching token', error, RestAPIRelayPlugin.name);
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
     }
     throw new Error('Failed to fetch token after multiple attempts');
   }
