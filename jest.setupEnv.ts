@@ -5,8 +5,7 @@ process.env.SERVER_URL = 'nats';
 process.env.FUNCTION_NAME = 'relay';
 process.env.PRODUCER_STREAM = 'stream';
 process.env.CONSUMER_STREAM = 'stream';
-process.env.DESTINATION_TYPE = 'nats';
-process.env.DESTINATION_URL = 'nats';
+process.env.DESTINATION_TRANSPORT_URL = 'nats';
 
 process.env.APM_ACTIVE = 'false';
 process.env.APM_SERVICE_NAME = '';
