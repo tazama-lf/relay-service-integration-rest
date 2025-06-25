@@ -14,7 +14,7 @@ The REST Relay Plugin is a transport plugin that enables applications to easily 
 - HTTP/HTTPS connection pooling for optimal performance
 - Health check verification before initialization. (Should return a 200 status code)
 - Automatic retry mechanisms for token fetching and API calls
-- Support for various data types (binary, string, object) with automatic conversion
+- Support for various data types (buffer, string) with automatic conversion
 - APM integration for performance monitoring and tracing
 - Comprehensive logging for debugging and operational visibility
 - Simple API with just two methods: `init()` and `relay()`
@@ -145,6 +145,7 @@ Fetches an authentication token with retry logic (up to 5 attempts with 500ms de
 
 #### `sendData(token, data)`
 
+Sets `content-type: application/json` if the payload is a string.
 Sends data to the destination URL with authentication and handles unauthorized errors.
 
 ### Configuration Module
