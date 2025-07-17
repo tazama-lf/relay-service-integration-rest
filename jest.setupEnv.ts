@@ -10,3 +10,4 @@ process.env.DESTINATION_TRANSPORT_URL = 'nats';
 process.env.APM_ACTIVE = 'false';
 process.env.APM_SERVICE_NAME = '';
 process.env.APM_URL = '';
+process.env.RETRY_ATTEMPTS = '3';
