@@ -3,6 +3,10 @@ import axios from 'axios';
 import NodeCache from 'node-cache';
 import { validateProcessorConfig } from '@tazama-lf/frms-coe-lib/lib/config/processor.config';
 
+jest.mock('node:timers/promises', () => ({
+  setTimeout: jest.fn(() => Promise.resolve()),
+}));
+
 jest.mock('axios');
 jest.mock('node-cache');
 jest.mock('@tazama-lf/frms-coe-lib/lib/config/processor.config');
@@ -169,7 +173,7 @@ describe('RestAPIRelayPlugin', () => {
         testData,
         expect.objectContaining({
           headers: {
-            Authorization: 'Bearer cached-token',
+            'Authorization': 'Bearer cached-token',
             'Content-Type': 'application/json',
           },
           httpAgent: expect.any(Object),
@@ -291,7 +295,7 @@ describe('RestAPIRelayPlugin', () => {
         testData,
         expect.objectContaining({
           headers: {
-            Authorization: 'Bearer cached-token',
+            'Authorization': 'Bearer cached-token',
             'Content-Type': 'application/json',
           },
           httpAgent: expect.any(Object),
@@ -339,7 +343,6 @@ describe('RestAPIRelayPlugin', () => {
       mockedAxios.post.mockRejectedValueOnce(new Error('Network error')).mockResolvedValueOnce({ data: 'fetched-token' });
 
       const fetchPromise = (plugin as any).fetchToken();
-      await jest.advanceTimersByTimeAsync(5000);
       const result = await fetchPromise;
 
       expect(result).toBe('fetched-token');
@@ -350,7 +353,6 @@ describe('RestAPIRelayPlugin', () => {
       mockedAxios.post.mockResolvedValueOnce({ data: null }).mockResolvedValueOnce({ data: 'valid-token' });
 
       const fetchPromise = (plugin as any).fetchToken();
-      await jest.advanceTimersByTimeAsync(5000);
       const result = await fetchPromise;
 
       expect(result).toBe('valid-token');
@@ -361,7 +363,6 @@ describe('RestAPIRelayPlugin', () => {
       mockedAxios.post.mockRejectedValueOnce(new Error('Network error')).mockResolvedValueOnce({ data: 'fetched-token' });
 
       const fetchPromise = (plugin as any).fetchToken();
-      await jest.advanceTimersByTimeAsync(5000);
       const result = await fetchPromise;
 
       expect(result).toBe('fetched-token');
@@ -384,7 +385,7 @@ describe('RestAPIRelayPlugin', () => {
         'test-payload',
         expect.objectContaining({
           headers: {
-            Authorization: 'Bearer test-token',
+            'Authorization': 'Bearer test-token',
             'Content-Type': 'application/json',
           },
           httpAgent: expect.any(Object),
@@ -450,7 +451,7 @@ describe('RestAPIRelayPlugin', () => {
         'test-payload',
         expect.objectContaining({
           headers: {
-            Authorization: 'Bearer new-token',
+            'Authorization': 'Bearer new-token',
             'Content-Type': 'application/json',
           },
           httpAgent: expect.any(Object),
@@ -511,7 +512,7 @@ describe('RestAPIRelayPlugin', () => {
         stringPayload,
         expect.objectContaining({
           headers: {
-            Authorization: 'Bearer test-token',
+            'Authorization': 'Bearer test-token',
             'Content-Type': 'application/json',
           },
           httpAgent: expect.any(Object),
