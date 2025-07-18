@@ -1,12 +1,16 @@
 {
   "name": "@tazama-lf/rest-relay-plugin",
-  "version": "1.0.0",
+  "version": "2.1.1-rc.0",
   "description": "RestAPI plugin for Tazama relay-service",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist/**/*"
   ],
+  "publishConfig": {
+    "@tazama-lf:registry": "https://npm.pkg.github.com/",
+    "access": "public"
+  },
   "scripts": {
     "clean": "npx rimraf dist node_modules coverage package-lock.json",
     "build": "npx tsc",
@@ -28,7 +32,7 @@
     "rest-api",
     "relay-service"
   ],
-  "author": "Umair Khan",
+  "author": "",
   "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/tazama-lf/relay-service-integration-rest/issues"
