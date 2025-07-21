@@ -51,7 +51,7 @@ jobs:
         with:
           images: tazamaorg/${{ env.REPO_NAME }}
           tags: |
-            type=raw,value=2.1.1-rc
+            type=raw,value=2.2.0-rc
 
       - name: Build and push Docker image
         id: push
