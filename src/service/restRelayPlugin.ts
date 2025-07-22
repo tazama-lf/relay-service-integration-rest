@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { LoggerService } from '@tazama-lf/frms-coe-lib';
 import type { Apm } from '@tazama-lf/frms-coe-lib/lib/services/apm';
-import http from 'http';
-import https from 'https';
+import http from 'node:http';
+import https from 'node:https';
 import axios, { type AxiosResponse } from 'axios';
 import NodeCache from 'node-cache';
+import { setTimeout } from 'node:timers/promises';
 import { additionalEnvironmentVariables, type Configuration } from '../config';
 import { validateProcessorConfig } from '@tazama-lf/frms-coe-lib/lib/config/processor.config';
 import type { ITransportPlugin } from '@tazama-lf/frms-coe-lib/lib/interfaces/relay-service/ITransportPlugin';
@@ -37,9 +38,11 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
     let isHealthy = false;
     for (let i = 0; i < this.configuration.RETRY_ATTEMPTS; i++) {
       const healthCheck = await axios.get(this.configuration.AUTH_HEALTH_URL);
-      if (healthCheck.status !== 200) {
+      const SUCCESS_CODE = 200;
+      if (healthCheck.status !== SUCCESS_CODE) {
         this.loggerService?.log('Health check failed,trying again', RestAPIRelayPlugin.name);
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        const DELAY = 500;
+        await setTimeout(DELAY);
       } else {
         const tokenRes = await axios.post(this.configuration.AUTH_TOKEN_URL, {
           username: this.configuration.AUTH_USERNAME,
@@ -77,9 +80,7 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
     let apmTransaction = null;
     this.loggerService?.log('Relaying data', RestAPIRelayPlugin.name);
     let token = this.cache.get<string>(this.configuration.AUTH_USERNAME);
-    if (!token) {
-      token = await this.fetchToken();
-    }
+    token ??= await this.fetchToken();
     try {
       apmTransaction = this.apm?.startTransaction(RestAPIRelayPlugin.name);
       const span = this.apm?.startSpan('relay');
@@ -120,15 +121,15 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
 
         if (tokenRes.data) {
           this.cache.set(this.configuration.AUTH_USERNAME, tokenRes.data);
-          return tokenRes.data;
+          return tokenRes.data as string;
         } else {
           this.loggerService?.error('Invalid token response', tokenRes, RestAPIRelayPlugin.name);
         }
       } catch (error) {
         this.loggerService?.error('Error fetching token', error, RestAPIRelayPlugin.name);
       }
-
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      const DELAY = 5000; // 5 seconds delay before retrying
+      await setTimeout(DELAY);
     }
     throw new Error('Failed to fetch token after multiple attempts');
   }
@@ -161,8 +162,8 @@ export default class RestAPIRelayPlugin implements ITransportPlugin {
 
     try {
       const response = await makeRequest(token);
-
-      if (response.status === 401) {
+      const ERROR_CODE = 401;
+      if (response.status === ERROR_CODE) {
         this.loggerService?.log('Unauthorized access - token may be invalid', RestAPIRelayPlugin.name);
         const newToken = await this.fetchToken();
         await makeRequest(newToken);
