@@ -4,16 +4,22 @@
   "description": "Tazama relay-service plug-in for REST API integration",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tazama-lf/relay-service-integration-rest.git"
+  },
   "files": [
     "dist/**/*"
   ],
   "publishConfig": {
+    "registry": "https://npm.pkg.github.com/",
     "@tazama-lf:registry": "https://npm.pkg.github.com/",
     "access": "public"
   },
   "scripts": {
     "clean": "npx rimraf dist node_modules coverage package-lock.json",
     "build": "npx tsc",
+    "dry": "npm publish --dry-run",
     "test": "jest",
     "fix:eslint": "eslint --fix",
     "fix:prettier": "prettier --write \"**/*.ts\"",
@@ -23,10 +29,6 @@
     "lint:eslint-no-inline": "eslint --no-inline-config",
     "lint:prettier": "prettier --check \"**/*.ts\"",
     "prepare": "husky"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/tazama-lf/relay-service-integration-rest.git"
   },
   "keywords": [
     "rest-api",
