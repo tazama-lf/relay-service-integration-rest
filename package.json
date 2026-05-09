@@ -41,7 +41,7 @@
   },
   "homepage": "https://github.com/tazama-lf/relay-service-integration-rest#readme",
   "dependencies": {
-    "@tazama-lf/frms-coe-lib": "7.0.2-rc.2",
+    "@tazama-lf/frms-coe-lib": "8.0.0-rc.2",
     "axios": "^1.12.0",
     "dotenv": "^17.2.0",
     "node-cache": "^5.1.2",
